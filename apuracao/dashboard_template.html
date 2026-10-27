@@ -1,0 +1,421 @@
+<title>Simulador de Apuração 2026</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: painel de transmissão eleitoral. Controle (slider) no topo, dois placares lado a lado
+   (totalização x projeção), gráfico de evolução abaixo, tabela e notas no rodapé. */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #e9edf2;
+  --fg: #171b22;
+  --fg-2: #5a6474;
+  --fg-3: #8b94a3;
+  --line: #d9dee6;
+  --accent: #0f6f6a;
+  --accent-fg: #ffffff;
+  --lula: #d93d3c;
+  --bolsonaro: #2a78d6;
+  --outros: #7c8696;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418; --surface: #1a1e24; --surface-2: #242a32; --fg: #eceef2; --fg-2: #a6aebb;
+    --fg-3: #737c8a; --line: #2d343e; --accent: #3fb8b0; --accent-fg: #0b1413;
+    --lula: #e66767; --bolsonaro: #3987e5; --outros: #8e97a6; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111418; --surface: #1a1e24; --surface-2: #242a32; --fg: #eceef2; --fg-2: #a6aebb;
+  --fg-3: #737c8a; --line: #2d343e; --accent: #3fb8b0; --accent-fg: #0b1413;
+  --lula: #e66767; --bolsonaro: #3987e5; --outros: #8e97a6; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 3vw, 30px); letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-2); margin: 0; }
+p { margin: 0; }
+.sub { color: var(--fg-2); max-width: 70ch; }
+header { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { font: inherit; font-weight: 500; padding: 8px 16px; border: 0; background: transparent; color: var(--fg-2); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.seg button:focus-visible, input:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.control { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: grid; gap: 10px; }
+.control-top { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; justify-content: space-between; }
+.big { font-family: var(--font-display); font-weight: 700; font-size: clamp(34px, 5vw, 48px); line-height: 1; font-variant-numeric: tabular-nums; }
+.big small { font-size: 0.5em; font-weight: 600; color: var(--fg-2); margin-left: 2px; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.meta b { color: var(--fg); font-weight: 600; }
+input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; margin: 0; cursor: pointer; }
+.ticks { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
+.play { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { font: inherit; font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); cursor: pointer; }
+.btn:hover { border-color: var(--fg-3); }
+
+.boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.board { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.pill { font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--fg-2); white-space: nowrap; }
+.rows { display: grid; gap: 10px; }
+.row { display: grid; grid-template-columns: 10px 1fr auto; grid-template-areas: "dot name pct" "dot bar bar" "dot sub sub"; column-gap: 10px; row-gap: 3px; align-items: center; }
+.dot { grid-area: dot; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.name { grid-area: name; font-weight: 500; }
+.pct { grid-area: pct; font-family: var(--font-display); font-weight: 700; font-size: 24px; font-variant-numeric: tabular-nums; line-height: 1; }
+.bar { grid-area: bar; height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--c); border-radius: 4px; transition: width .15s ease-out; }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+.subline { grid-area: sub; display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.delta { font-family: var(--font-mono); font-size: 12px; }
+.delta.ok { color: var(--accent); }
+.empty { color: var(--fg-3); font-style: italic; }
+.final-row { border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 4px; font-size: 13px; color: var(--fg-2); }
+.final-row div { display: flex; justify-content: space-between; gap: 10px; font-variant-numeric: tabular-nums; }
+.final-row b { color: var(--fg); font-weight: 600; }
+
+.chart-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 10px; min-width: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--fg-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { width: 28px; height: 10px; overflow: visible; }
+.chart-wrap { position: relative; width: 100%; }
+svg.chart { width: 100%; height: auto; display: block; font-family: var(--font-body); }
+.chart text { fill: var(--fg-2); font-size: 11px; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .axis { stroke: var(--line); stroke-width: 1; }
+.chart .lbl-end { font-size: 11px; font-weight: 500; fill: var(--fg); }
+.chart .cursor { stroke: var(--fg); stroke-width: 1; stroke-dasharray: 2 3; opacity: .6; }
+.chart .hover { stroke: var(--fg-3); stroke-width: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12); min-width: 170px; display: grid; gap: 3px; z-index: 2; }
+.tip b { font-family: var(--font-mono); font-weight: 500; }
+.tip .t { color: var(--fg-2); margin-bottom: 2px; }
+.tip div { display: flex; justify-content: space-between; gap: 12px; }
+.tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 18px; }
+summary { cursor: pointer; font-weight: 500; color: var(--fg-2); }
+.tbl { overflow-x: auto; margin-top: 10px; }
+table { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+th, td { text-align: right; padding: 5px 10px; border-bottom: 1px solid var(--line); }
+th { color: var(--fg-2); font-weight: 500; font-size: 12px; }
+th:first-child, td:first-child { text-align: left; }
+.notes { color: var(--fg-2); font-size: 13px; max-width: 80ch; display: grid; gap: 6px; }
+.notes b { color: var(--fg); font-weight: 600; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Simulador de Apuração 2026</h1>
+      <p class="sub">Arraste o controle para ver, a cada ponto percentual de urnas apuradas, a totalização até aquele instante e a projeção do modelo de <em>swing</em> por local de votação. No 1º turno a apuração segue o horário real de recebimento dos boletins de urna; no 2º, a totalização é a oficial do TSE, versão a versão.</p>
+    </div>
+    <div class="seg" role="group" aria-label="Turno">
+      <button type="button" id="btn-t1" data-cen="t1" aria-pressed="true">1º turno</button>
+      <button type="button" id="btn-t2" data-cen="t2" aria-pressed="false">2º turno</button>
+    </div>
+  </header>
+
+  <section class="control" aria-label="Controle da apuração">
+    <div class="control-top">
+      <div class="big"><span id="pct-big">2</span><small>% das seções apuradas</small></div>
+      <div class="meta">
+        <span>Seções: <b id="m-secoes">—</b></span>
+        <span>Locais de votação: <b id="m-locais">—</b></span>
+        <span>Votos válidos: <b id="m-validos">—</b></span>
+        <span>Regra do modelo: <b id="m-nivel">—</b></span>
+      </div>
+    </div>
+    <label for="pct" class="visually-hidden" style="position:absolute;left:-9999px">Percentual de seções apuradas</label>
+    <input type="range" id="pct" min="0" max="100" step="1" value="2" aria-valuemin="0" aria-valuemax="100">
+    <div class="ticks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+    <div class="play">
+      <button type="button" class="btn" id="btn-play">▶ Reproduzir apuração</button>
+      <button type="button" class="btn" id="btn-reset">Voltar a 0%</button>
+    </div>
+  </section>
+
+  <section class="boards">
+    <div class="board" aria-labelledby="h-parcial">
+      <div class="board-head"><h2 id="h-parcial">Totalização até o instante</h2><span class="pill" id="pill-parcial">votos válidos apurados</span></div>
+      <div class="rows" id="rows-parcial"></div>
+      <div class="final-row" id="final-parcial"></div>
+    </div>
+    <div class="board" aria-labelledby="h-proj">
+      <div class="board-head"><h2 id="h-proj">Projeção do modelo</h2><span class="pill" id="pill-nivel">—</span></div>
+      <div class="rows" id="rows-proj"></div>
+      <div class="final-row" id="final-proj"></div>
+    </div>
+  </section>
+
+  <section class="chart-card" aria-labelledby="h-chart">
+    <div class="board-head"><h2 id="h-chart">Evolução ao longo da apuração</h2><span class="pill">% dos votos válidos, a cada 1% das seções</span></div>
+    <div class="legend" id="legend"></div>
+    <div class="chart-wrap" id="chart-wrap">
+      <svg class="chart" id="chart" viewBox="0 0 960 420" role="img" aria-label="Totalização oficial e projeção do modelo por percentual de seções apuradas"></svg>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+  </section>
+
+  <details>
+    <summary>Ver tabela (a cada 5% das seções)</summary>
+    <div class="tbl"><table id="tabela"></table></div>
+  </details>
+
+  <section class="notes" id="notes"></section>
+</div>
+
+<script type="application/json" id="dados">__DADOS__</script>
+<script>
+(function () {
+  const DADOS = JSON.parse(document.getElementById('dados').textContent);
+  const NOMES = DADOS.nomes;
+  const COR = { lula: 'var(--lula)', bolsonaro: 'var(--bolsonaro)', outros: 'var(--outros)' };
+  const _nf = new Intl.NumberFormat('pt-BR');
+  const fmtInt = v => _nf.format(v);
+  const curto = b => NOMES[b].split(' ')[0];
+  const fmtPct = (v, d = 2) => v == null ? '—' : (100 * v).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) + '%';
+  const fmtDelta = v => (v >= 0 ? '+' : '−') + Math.abs(100 * v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' p.p.';
+  const NIVEL = { prior: 'pesquisa (nada apurado)', nacional: 'regra nacional', regiao: 'regras por região', uf: 'regras por UF' };
+
+  let cen = DADOS.cenarios[0];
+  let pct = 2;
+  let timer = null;
+
+  const $ = id => document.getElementById(id);
+  const slider = $('pct');
+
+  function ponto(p) { return cen.serie[p]; }
+  // Última versão oficial do TSE com até p% das seções apuradas (null se não houver série oficial).
+  function oficialEm(p) {
+    if (!cen.oficial || p === 0) return null;
+    let r = null;
+    for (const o of cen.oficial) { if (o.pct_secoes * 100 <= p + 1e-9) r = o; else break; }
+    return r;
+  }
+
+  function rowHTML(b, share, votos, sub) {
+    const w = share == null ? 0 : Math.max(0, Math.min(100, 100 * share));
+    return `<div class="row" style="--c:${COR[b]}">
+      <span class="dot"></span>
+      <span class="name">${NOMES[b]}</span>
+      <span class="pct">${fmtPct(share, 1)}</span>
+      <span class="bar"><i style="width:${w}%"></i></span>
+      <span class="subline"><span>${votos == null ? '' : fmtInt(Math.round(votos)) + ' votos'}</span>${sub || ''}</span>
+    </div>`;
+  }
+
+  function renderBoards() {
+    const s = ponto(pct);
+    $('pct-big').textContent = pct;
+    $('m-secoes').textContent = fmtInt(s.secoes_apuradas) + ' de ' + fmtInt(cen.total_secoes);
+    $('m-locais').textContent = fmtInt(s.locais_apurados) + ' de ' + fmtInt(cen.total_locais);
+    const validos = cen.blocos.reduce((a, b) => a + s['votos_' + b], 0);
+    $('m-validos').textContent = fmtInt(validos) + ' (' + fmtPct(s.pct_validos, 1) + ' do total)';
+    $('m-nivel').textContent = NIVEL[s.nivel];
+    $('pill-nivel').textContent = NIVEL[s.nivel];
+
+    // Totalização: série oficial do TSE quando existe (2º turno), senão a parcial simulada.
+    const of = oficialEm(pct);
+    const pillParcial = $('pill-parcial');
+    if (pct === 0) {
+      $('rows-parcial').innerHTML = '<p class="empty">Nenhuma seção totalizada ainda.</p>';
+      pillParcial.textContent = cen.oficial ? 'boletim oficial do TSE' : 'parcial simulada';
+    } else if (of) {
+      pillParcial.textContent = `boletim do TSE das ${of.hora.replace(':', 'h')} · ${fmtPct(of.pct_secoes, 2)} das seções`;
+      $('rows-parcial').innerHTML = cen.blocos.map(b => {
+        const d = of['parcial_' + b] - cen.final[b];
+        return rowHTML(b, of['parcial_' + b], of['votos_' + b], `<span class="delta">${fmtDelta(d)} vs. final</span>`);
+      }).join('');
+    } else {
+      pillParcial.textContent = 'parcial simulada (ordem real dos BUs)';
+      $('rows-parcial').innerHTML = cen.blocos.map(b => {
+        const d = s['parcial_' + b] - cen.final[b];
+        return rowHTML(b, s['parcial_' + b], s['votos_' + b], `<span class="delta">${fmtDelta(d)} vs. final</span>`);
+      }).join('');
+    }
+    $('final-parcial').innerHTML = '<div><span>Resultado oficial final</span></div>' +
+      cen.blocos.map(b => `<div><span>${NOMES[b]}</span><b>${fmtPct(cen.final[b])} · ${fmtInt(cen.final_votos[b])}</b></div>`).join('');
+
+    // Projeção
+    $('rows-proj').innerHTML = cen.blocos.map(b => {
+      const d = s['proj_' + b] - cen.final[b];
+      const ok = Math.abs(d) < 0.005;
+      return rowHTML(b, s['proj_' + b], s['proj_votos_' + b], `<span class="delta ${ok ? 'ok' : ''}">${fmtDelta(d)} vs. final</span>`);
+    }).join('');
+    const maior = cen.blocos.filter(b => b !== 'outros').sort((a, b) => s['proj_' + b] - s['proj_' + a]);
+    const vant = s['proj_' + maior[0]] - s['proj_' + maior[1]];
+    $('final-proj').innerHTML = `<div><span>Vantagem projetada</span><b>${curto(maior[0])} por ${fmtDelta(vant).replace('+', '')}</b></div>` +
+      `<div><span>Referência / ponto de partida</span><b>${cen.referencia} · ${cen.prior_rotulo}</b></div>`;
+  }
+
+  // ---------- gráfico ----------
+  const W = 960, H = 420, M = { t: 16, r: 132, b: 36, l: 48 };
+  const iw = W - M.l - M.r, ih = H - M.t - M.b;
+  const sx = p => M.l + iw * p / 100;
+  let y0 = 0, y1 = 1;
+  const sy = v => M.t + ih * (1 - (v - y0) / (y1 - y0));
+
+  function dominio() {
+    let lo = Infinity, hi = -Infinity;
+    cen.blocos.forEach(b => {
+      cen.serie.forEach(s => {
+        [cen.oficial ? null : s['parcial_' + b], s['proj_' + b]].forEach(v => { if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
+      });
+      (cen.oficial || []).forEach(o => { if (o.pct_secoes >= 0.005) { lo = Math.min(lo, o['parcial_' + b]); hi = Math.max(hi, o['parcial_' + b]); } });
+      lo = Math.min(lo, cen.final[b]); hi = Math.max(hi, cen.final[b]);
+    });
+    const pad = (hi - lo) * 0.08;
+    y0 = Math.max(0, Math.floor((lo - pad) * 20) / 20);
+    y1 = Math.min(1, Math.ceil((hi + pad) * 20) / 20);
+  }
+
+  function linha(campo, b) {
+    const fonte = (campo === 'parcial' && cen.oficial) ? cen.oficial : cen.serie;
+    let d = '', pen = false;
+    fonte.forEach(s => {
+      const v = s[campo + '_' + b];
+      if (v == null) { pen = false; return; }
+      d += (pen ? 'L' : 'M') + sx(100 * s.pct_secoes).toFixed(1) + ' ' + sy(v).toFixed(1) + ' ';
+      pen = true;
+    });
+    return d;
+  }
+
+  function renderChartBase() {
+    dominio();
+    const svg = $('chart');
+    let g = '';
+    // grade horizontal e eixo y
+    const step = (y1 - y0) > 0.3 ? 0.1 : 0.05;
+    for (let v = y0; v <= y1 + 1e-9; v += step) {
+      const y = sy(v).toFixed(1);
+      g += `<line class="grid" x1="${M.l}" x2="${M.l + iw}" y1="${y}" y2="${y}"/>`;
+      g += `<text x="${M.l - 8}" y="${y}" text-anchor="end" dominant-baseline="middle">${Math.round(100 * v)}%</text>`;
+    }
+    // eixo x
+    g += `<line class="axis" x1="${M.l}" x2="${M.l + iw}" y1="${M.t + ih}" y2="${M.t + ih}"/>`;
+    for (let p = 0; p <= 100; p += 10) {
+      g += `<text x="${sx(p).toFixed(1)}" y="${M.t + ih + 18}" text-anchor="middle">${p}%</text>`;
+    }
+    g += `<text x="${M.l + iw / 2}" y="${H - 4}" text-anchor="middle">seções apuradas</text>`;
+    // linhas finais (pontilhadas), parciais (tracejadas finas) e projeções (sólidas)
+    cen.blocos.forEach(b => {
+      const yf = sy(cen.final[b]).toFixed(1);
+      g += `<line x1="${M.l}" x2="${M.l + iw}" y1="${yf}" y2="${yf}" stroke="${COR[b]}" stroke-width="1" stroke-dasharray="1 4" opacity=".9"/>`;
+      g += `<path d="${linha('parcial', b)}" fill="none" stroke="${COR[b]}" stroke-width="1.5" stroke-dasharray="5 4" opacity=".75" stroke-linejoin="round"/>`;
+      g += `<path d="${linha('proj', b)}" fill="none" stroke="${COR[b]}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    });
+    // rótulos diretos na borda direita
+    const labs = cen.blocos.map(b => ({ b, y: sy(cen.final[b]), txt: `${curto(b)} · final ${fmtPct(cen.final[b], 1)}` }))
+      .sort((a, c) => a.y - c.y);
+    for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 14) labs[i].y = labs[i - 1].y + 14;
+    labs.forEach(l => { g += `<text class="lbl-end" x="${M.l + iw + 8}" y="${l.y.toFixed(1)}" dominant-baseline="middle">${l.txt}</text>`; });
+    g += `<g id="cursor"></g><g id="hover"></g>`;
+    svg.innerHTML = g;
+  }
+
+  function renderCursor() {
+    const s = ponto(pct);
+    const x = sx(pct).toFixed(1);
+    let g = `<line class="cursor" x1="${x}" x2="${x}" y1="${M.t}" y2="${M.t + ih}"/>`;
+    const of = oficialEm(pct);
+    cen.blocos.forEach(b => {
+      g += `<circle cx="${x}" cy="${sy(s['proj_' + b]).toFixed(1)}" r="5" fill="${COR[b]}" stroke="var(--surface)" stroke-width="2"/>`;
+      const pv = of ? of['parcial_' + b] : s['parcial_' + b];
+      if (pv != null) g += `<circle cx="${x}" cy="${sy(pv).toFixed(1)}" r="3.5" fill="var(--surface)" stroke="${COR[b]}" stroke-width="1.5"/>`;
+    });
+    $('cursor').innerHTML = g;
+  }
+
+  function renderLegend() {
+    const sw = (b, dash, w) => `<svg viewBox="0 0 28 10"><line x1="0" x2="28" y1="5" y2="5" stroke="${COR[b]}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''}/></svg>`;
+    $('legend').innerHTML = cen.blocos.map(b => `<span><i style="width:10px;height:10px;border-radius:50%;background:${COR[b]};display:inline-block"></i>${NOMES[b]}</span>`).join('') +
+      `<span>${sw('outros', '', 2.2)} projeção do modelo</span><span>${sw('outros', '5 4', 1.5)} ${cen.oficial ? 'totalização oficial do TSE (versão a versão)' : 'totalização parcial (ordem real dos BUs)'}</span><span>${sw('outros', '1 4', 1)} resultado final</span>`;
+  }
+
+  // hover / clique no gráfico
+  const wrap = $('chart-wrap'), tip = $('tip'), svgEl = $('chart');
+  function pctDoEvento(ev) {
+    const r = svgEl.getBoundingClientRect();
+    const x = (ev.clientX - r.left) * W / r.width;
+    return Math.max(0, Math.min(100, Math.round((x - M.l) / iw * 100)));
+  }
+  svgEl.addEventListener('pointermove', ev => {
+    const p = pctDoEvento(ev);
+    const s = ponto(p);
+    const of = oficialEm(p);
+    const x = sx(p).toFixed(1);
+    $('hover').innerHTML = `<line class="hover" x1="${x}" x2="${x}" y1="${M.t}" y2="${M.t + ih}"/>`;
+    tip.hidden = false;
+    tip.innerHTML = `<div class="t"><span>${p}% das seções${of ? ' · ' + of.hora.replace(':', 'h') : ''}</span></div>` + cen.blocos.map(b =>
+      `<div><span><i style="background:${COR[b]}"></i>${curto(b)}</span><b>${fmtPct(of ? of['parcial_' + b] : s['parcial_' + b], 1)} → ${fmtPct(s['proj_' + b], 1)}</b></div>`).join('') +
+      `<div class="t"><span>totalização → projeção</span></div>`;
+    const r = svgEl.getBoundingClientRect();
+    const px = (ev.clientX - r.left);
+    tip.style.left = Math.min(px + 14, r.width - tip.offsetWidth - 4) + 'px';
+    tip.style.top = Math.max(0, ev.clientY - r.top - tip.offsetHeight - 12) + 'px';
+    if (ev.buttons === 1) setPct(p);
+  });
+  svgEl.addEventListener('pointerleave', () => { tip.hidden = true; $('hover').innerHTML = ''; });
+  svgEl.addEventListener('pointerdown', ev => { setPct(pctDoEvento(ev)); });
+
+  function renderTable() {
+    const cols = ['% seções', 'seções', 'votos válidos'];
+    cen.blocos.forEach(b => { cols.push(`parcial ${curto(b)}`, `projeção ${curto(b)}`); });
+    let h = '<thead><tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+    for (let p = 0; p <= 100; p += 5) {
+      const s = ponto(p);
+      const of = oficialEm(p);
+      const validos = of ? of.validos : cen.blocos.reduce((a, b) => a + s['votos_' + b], 0);
+      h += `<tr><td>${p}%${of ? ' · ' + of.hora.replace(':', 'h') : ''}</td><td>${fmtInt(of ? of.secoes : s.secoes_apuradas)}</td><td>${fmtInt(validos)}</td>` +
+        cen.blocos.map(b => `<td>${fmtPct(of ? of['parcial_' + b] : s['parcial_' + b])}</td><td>${fmtPct(s['proj_' + b])}</td>`).join('') + '</tr>';
+    }
+    h += '<tr><td>final</td><td>' + fmtInt(cen.total_secoes) + '</td><td>' + fmtInt(cen.blocos.reduce((a, b) => a + cen.final_votos[b], 0)) + '</td>' +
+      cen.blocos.map(b => `<td>${fmtPct(cen.final[b])}</td><td>${fmtPct(cen.final[b])}</td>`).join('') + '</tr></tbody>';
+    $('tabela').innerHTML = h;
+  }
+
+  function renderNotes() {
+    $('notes').innerHTML = `
+      <p><b>Como ler.</b> A totalização é a soma simples das urnas já contadas, como aparece na TV; nas primeiras horas ela reflete só os lugares que apuram mais rápido.${cen.oficial ? ' No 2º turno ela vem dos ' + cen.oficial.length + ' boletins nacionais que o TSE publicou ao longo da noite (coletor Contagem Direta), com o horário de cada um; a projeção, que precisa dos votos por local, roda sobre uma ordem de apuração simulada e calibrada para seguir essa mesma curva.' : ''} A projeção parte da pesquisa (${cen.prior_rotulo}), mede quanto cada local de votação já apurado mudou em relação a ${cen.referencia} e aplica esse <em>swing</em>, por regressão hierárquica (nacional → região → UF), aos locais ainda pendentes.</p>
+      <p><b>Ordem de apuração.</b> ${cen.ordem_descricao.charAt(0).toUpperCase() + cen.ordem_descricao.slice(1)}.${cen.ordem.startsWith('oficial') ? ' O TSE ainda não publicou os boletins de urna do 2º turno, e a ordem real do 1º turno não serve de aproximação: a apuração do 1º turno foi muito mais enviesada (Lula perto de 40% da parcial entre 5% e 30% das urnas) do que a do 2º.' : ''} Fonte: votação por seção e boletins de urna do TSE, cargo Presidente, eleições de 2022 e 2026; só votos válidos (brancos e nulos excluídos).</p>`;
+  }
+
+  function setPct(p, fromSlider) {
+    pct = p;
+    if (!fromSlider) slider.value = p;
+    slider.setAttribute('aria-valuenow', p);
+    renderBoards();
+    renderCursor();
+  }
+
+  function setCenario(id) {
+    cen = DADOS.cenarios.find(c => c.id === id);
+    document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cen === id)));
+    renderLegend(); renderChartBase(); renderTable(); renderNotes();
+    setPct(pct);
+    try { localStorage.setItem('apuracao.cen', id); } catch (e) {}
+  }
+
+  function stopPlay() { if (timer) { clearInterval(timer); timer = null; $('btn-play').textContent = '▶ Reproduzir apuração'; } }
+  $('btn-play').addEventListener('click', () => {
+    if (timer) { stopPlay(); return; }
+    if (pct >= 100) setPct(0);
+    $('btn-play').textContent = '❚❚ Pausar';
+    timer = setInterval(() => { if (pct >= 100) { stopPlay(); return; } setPct(pct + 1); }, 120);
+  });
+  $('btn-reset').addEventListener('click', () => { stopPlay(); setPct(0); });
+  slider.addEventListener('input', () => { stopPlay(); setPct(Number(slider.value), true); });
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { stopPlay(); setCenario(b.dataset.cen); }));
+
+  let inicial = 't1';
+  try { inicial = localStorage.getItem('apuracao.cen') || 't1'; } catch (e) {}
+  if (!DADOS.cenarios.some(c => c.id === inicial)) inicial = 't1';
+  setCenario(inicial);
+})();
+</script>

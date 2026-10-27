@@ -1,0 +1,21 @@
+Apuração de presidente, 2º turno 2026 (25/10/2026) - nível Brasil, versão a versão
+
+Fonte: Tribunal Superior Eleitoral, arquivo público de divulgação
+https://resultados.tse.jus.br/oficial/ele2026/6258/dados/br/br-c0001-e006258-u.json
+Capturado pelo coletor do projeto Contagem Direta, consultando o TSE a cada 20 s
+(a cada 60 s até 17h38). Cada versão nova publicada pelo TSE foi gravada uma vez.
+
+Conteúdo
+- apuracao-brasil-por-versao.csv: uma linha por versão, em ordem de horário do TSE.
+  hora_tse é o horário de Brasília em que o TSE gerou a versão (campos dg/hg do arquivo).
+  pct_lula e pct_flavio são sobre os votos válidos.
+- json-original-tse/: os arquivos JSON exatamente como o TSE publicou (br-<idg>.json).
+
+Observações
+- O TSE publicou em média a cada ~30 s. Versões que duraram menos de 20 s, ou que o
+  cache do TSE não chegou a servir, podem não ter sido capturadas; não há como provar
+  que a série está completa, porque o TSE não publica a lista de versões.
+- Lacunas do próprio TSE: nenhuma publicação entre 17h07m01 e 19h01m56 (pausa anunciada);
+  no fim da noite houve intervalos de 3 a 13 minutos.
+- As duas primeiras linhas são os arquivos zerados de antes da abertura.
+- versao_idg não é crescente ao longo da noite; ordene por data_tse + hora_tse.

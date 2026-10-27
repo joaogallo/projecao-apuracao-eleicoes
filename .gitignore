@@ -1,0 +1,11 @@
+.venv/
+.cache/
+__pycache__/
+*.egg-info/
+.DS_Store
+
+# Dados brutos grandes ou de terceiros (ver README, seção "Dados")
+resources/votacao_secao_*/*.csv
+resources/bweb_2026_1t/
+resources/*.mp4
+resources/*transcrição*.txt

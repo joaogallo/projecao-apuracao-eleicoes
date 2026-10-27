@@ -1,0 +1,19 @@
+[project]
+name = "apuracao"
+version = "0.1.0"
+description = "Projeção do resultado eleitoral durante a apuração a partir do swing por local de votação (modelo inspirado em Rodrigo Mahlmeister)"
+requires-python = ">=3.11"
+dependencies = [
+    "polars>=1.0",
+    "numpy>=1.26",
+]
+
+[project.scripts]
+apuracao = "apuracao.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["apuracao"]
