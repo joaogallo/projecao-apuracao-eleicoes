@@ -178,6 +178,18 @@ apuradas que mostra a totalização até aquele instante (no 2º turno, o boleti
 TSE com seu horário), a projeção do modelo e um gráfico da evolução das duas curvas
 contra o resultado final.
 
+`apuracao.dashboard` também grava `site/index.html`, a mesma página embrulhada em um
+documento HTML completo, que é o que o Vercel publica.
+
+## Publicação no Vercel
+
+O site é estático (um único `index.html` com os dados embutidos), então não há build nem
+servidor: `vercel.json` aponta para a pasta `site/` e `.vercelignore` deixa de fora os
+dados e o código Python. Basta importar o repositório no painel do Vercel (ou rodar
+`vercel --prod` na pasta do projeto); cada push na `main` republica o site. Para
+atualizar os números: rodar `apuracao.exportar` e `apuracao.dashboard` localmente,
+commitar `site/index.html` e dar push.
+
 Outros utilitários: `apuracao.bweb` (extrai a ordem real dos boletins de urna),
 `apuracao.calibrar_ordem` (calibra uma ordem simulada numa curva oficial) e
 `apuracao.comparar_ordem` (compara ordens com a série oficial do 2º turno).
