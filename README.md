@@ -78,11 +78,11 @@ Modos de `--ordem`:
 
 - `auto` (padrão): a ordem real dos boletins de urna, se o CSV acima existir; senão
   `oficial-2026`.
-- `oficial-2026` e `oficial-2022`: um deslocamento por UF e um peso para o porte do
-  município, calibrados por `apuracao/calibrar_ordem.py` para que a totalização parcial
-  simulada reproduza a curva oficial "% do candidato × % de urnas apuradas" do 2º turno.
-  A de 2026 é calibrada na série oficial versão a versão (abaixo) com erro de 0,09 p.p.;
-  a de 2022, em 14 pontos lidos do infográfico do g1.
+- `oficial-2026`: um deslocamento por UF e um peso para o porte do município, calibrados
+  por `apuracao/calibrar_ordem.py` para que a totalização parcial simulada reproduza, com
+  erro de 0,09 p.p., a série oficial do TSE versão a versão (abaixo). A série diz quantas
+  seções e votos havia em cada versão, não quais seções; por isso a ordem por local
+  continua simulada, e a projeção do 2º turno depende dela.
 - `realista`: viés estilizado (municípios pequenos e Sul/Sudeste/Centro-Oeste antes das
   capitais e do Nordeste), parecido com 2022.
 - `aleatoria`: controle, amostra representativa.

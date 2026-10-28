@@ -37,7 +37,7 @@ def parse_args(argv=None):
     p.add_argument("--lambda-uf", type=float, default=ConfigModelo.lambda_uf)
     p.add_argument("--ordem", default="auto",
                    help="'auto' (padrão: ordem real dos boletins de urna se resultados/ordem_bweb_2026_1t.csv existir, "
-                        "senão 'oficial-2026'), 'oficial-2026', 'oficial-2022', 'realista', 'aleatoria' ou caminho "
+                        "senão 'oficial-2026'), 'oficial-2026', 'realista', 'aleatoria' ou caminho "
                         "de CSV (uf,cd_municipio,nr_local,ordem)")
     p.add_argument("--seed", type=int, default=2026)
     p.add_argument("--pontos", default=None,

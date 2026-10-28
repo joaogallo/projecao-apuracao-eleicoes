@@ -12,10 +12,11 @@ Modos disponíveis:
   municípios pequenos e as regiões Sul/Sudeste/Centro-Oeste totalizam antes das
   capitais e do Nordeste. Isso faz as primeiras urnas não serem representativas,
   exatamente o problema que o modelo de swing resolve.
-* ``oficial-2026`` e ``oficial-2022``: ordens calibradas (deslocamento por UF +
-  porte do município + ruído) para que a parcial simulada reproduza a curva
-  oficial "% do candidato x % de urnas apuradas" do 2º turno de cada ano, tal
-  como divulgada pelo TSE/g1. Ver ``calibrar_ordem.py``.
+* ``oficial-2026``: ordem calibrada (deslocamento por UF + porte do município +
+  ruído) para que a parcial simulada reproduza, versão a versão, a totalização
+  nacional que o TSE publicou no 2º turno de 2026 (``resources/apuracao-brasil``).
+  A série oficial diz quantas seções e votos havia em cada versão, não quais
+  seções; por isso a ordem por local ainda é simulada. Ver ``calibrar_ordem.py``.
 * arquivo CSV com colunas ``uf, cd_municipio, nr_local, ordem`` (ordem crescente
   ou timestamp), para usar uma ordem real, por exemplo reconstruída dos horários
   de recebimento dos boletins de urna (arquivos "bweb" do TSE).
@@ -35,7 +36,7 @@ _PESO_PORTE = 0.8   # municípios maiores demoram mais (z-score do log do eleito
 _DESVIO_RUIDO = 1.0
 
 
-# Parâmetros calibrados por ``calibrar_ordem.py`` contra a curva oficial do 2º turno.
+# Parâmetros calibrados por ``calibrar_ordem.py`` na série oficial versão a versão do 2º turno de 2026.
 CALIBRADAS = {
     "oficial-2026": {  # alvo: série oficial versão a versão do TSE (363 versões), RMSE 0,09 p.p.
         "offset_uf": {"AC": 0.356, "AL": -0.75, "AM": 1.5, "AP": -2.513, "BA": 0.6, "CE": 1.012, "DF": 1.744,
@@ -43,13 +44,6 @@ CALIBRADAS = {
                       "PB": -0.6, "PE": 0.6, "PI": 0.937, "PR": 0.0, "RJ": 1.106, "RN": -0.6, "RO": -0.525,
                       "RR": 2.025, "RS": 0.319, "SC": 0.019, "SE": 0.994, "SP": 0.0, "TO": -0.75, "ZZ": -1.181},
         "w_porte": 0.2,
-    },
-    "oficial-2022": {
-        "offset_uf": {"AC": 0.769, "AL": 0.075, "AM": 0.094, "AP": 1.387, "BA": 0.619, "CE": 0.094, "DF": -0.469,
-                      "ES": 0.544, "GO": 0.731, "MA": 0.056, "MG": 1.106, "MS": -1.2, "MT": -0.187, "PA": 0.244,
-                      "PB": 0.769, "PE": 0.056, "PI": 0.544, "PR": 0.581, "RJ": -0.037, "RN": -0.244, "RO": -0.731,
-                      "RR": -0.619, "RS": 0.544, "SC": -0.6, "SE": -0.112, "SP": -0.619, "TO": 0.562, "ZZ": 0.731},
-        "w_porte": 0.219,
     },
 }
 
@@ -111,8 +105,8 @@ def descrever_ordem(especificacao: str) -> str:
         return ("ordem real: horário de recebimento dos boletins de urna do 1º turno de 2026 "
                 "(mediana das seções de cada local de votação)")
     if e in CALIBRADAS:
-        return (f"ordem simulada, calibrada para reproduzir a curva oficial de totalização do 2º turno de {e[-4:]} "
-                "(deslocamento por UF + porte do município + ruído)")
+        return ("ordem simulada, calibrada para reproduzir a totalização oficial do TSE do 2º turno de 2026, "
+                "versão a versão (deslocamento por UF + porte do município + ruído)")
     if e == "realista":
         return "ordem simulada estilizada: municípios pequenos e Sul/Sudeste/Centro-Oeste antes das capitais e do Nordeste"
     return "ordem aleatória (amostra representativa)"
