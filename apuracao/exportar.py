@@ -17,14 +17,13 @@ from .ordem import descrever_ordem, obter_ordem, resolver_ordem
 from .simulacao import simular
 
 CENARIOS = [
-    # ordem: "auto" = horário real dos boletins de urna do 1º turno (quando extraído).
-    # No 2º turno o TSE ainda não publicou os BUs e a ordem do 1º turno não serve de proxy
-    # (a apuração do 2º turno foi muito menos enviesada), então a projeção roda sobre a
-    # ordem calibrada na série oficial e a totalização mostrada é a oficial, versão a versão.
+    # ordem: "auto" = horário real dos boletins de urna do turno (resultados/ordem_bweb_2026_<t>t.csv,
+    # extraído por apuracao.bweb); se o arquivo não existir, cai na ordem calibrada "oficial-2026".
+    # No 2º turno a totalização mostrada é a série oficial do TSE, versão a versão.
     {"id": "t1", "rotulo": "1º turno", "turno": 1, "ref": (2022, 1), "prior": "lula=46,bolsonaro=47",
      "prior_rotulo": "Quaest ajustada: Flávio 47%, Lula 46%", "ordem": "auto"},
     {"id": "t2", "rotulo": "2º turno", "turno": 2, "ref": (2022, 2), "extras": [(2026, 1)],
-     "prior": "lula=50,bolsonaro=50", "prior_rotulo": "empate técnico: 50% / 50%", "ordem": "oficial-2026"},
+     "prior": "lula=50,bolsonaro=50", "prior_rotulo": "empate técnico: 50% / 50%", "ordem": "auto"},
 ]
 NOMES = {
     2026: {"lula": "Lula (13)", "bolsonaro": "Flávio Bolsonaro (22)", "outros": "Outros"},
@@ -56,7 +55,7 @@ def main(argv=None):
         prior = Prior.de_texto(c["prior"])
         painel = montar_painel(atual, ref, cfg, extras)
         esp_ordem = a.ordem or c["ordem"]
-        ordem = obter_ordem(painel.atual, esp_ordem, a.seed)
+        ordem = obter_ordem(painel.atual, esp_ordem, a.seed, c["turno"])
         res = simular(painel, ordem, prior, cfg, pontos, com_ponderada=False, verbose=False)
         final = resultado_nacional(atual)
         blocos = [b for b in cfg.blocos if atual[f"v_{b}"].sum() > 0]
@@ -70,8 +69,8 @@ def main(argv=None):
                        for r in of.to_dicts()]
         saida["cenarios"].append({
             "oficial": oficial,
-            "ordem": Path(resolver_ordem(esp_ordem)).stem,
-            "ordem_descricao": descrever_ordem(esp_ordem),
+            "ordem": Path(resolver_ordem(esp_ordem, c["turno"])).stem,
+            "ordem_descricao": descrever_ordem(esp_ordem, c["turno"]),
             **{k: c[k] for k in ("id", "rotulo", "turno", "prior", "prior_rotulo")},
             "referencia": " + ".join(f"{y} ({t}º turno)" for y, t in [c["ref"], *c.get("extras", [])]),
             "blocos": blocos,

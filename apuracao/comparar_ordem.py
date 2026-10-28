@@ -1,7 +1,7 @@
 """Compara a totalização parcial que cada ordem de apuração produz com a série
 oficial do TSE (2º turno de 2026).
 
-    uv run python -m apuracao.comparar_ordem --ordens auto,oficial-2026,realista,aleatoria
+    uv run python -m apuracao.comparar_ordem --ordens auto,resultados/ordem_bweb_2026_1t.csv,oficial-2026,realista,aleatoria
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def curva_parcial(locais: pl.DataFrame, ordem: np.ndarray, pcts: np.ndarray) -> 
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ordens", default="auto,oficial-2026,realista,aleatoria")
+    ap.add_argument("--ordens", default="auto,resultados/ordem_bweb_2026_1t.csv,oficial-2026,realista,aleatoria")
     ap.add_argument("--seed", type=int, default=2026)
     ap.add_argument("--resources", type=Path, default=RAIZ / "resources")
     ap.add_argument("--cache", type=Path, default=RAIZ / ".cache")
@@ -40,11 +40,11 @@ def main(argv=None):
     alvo = 100 * of["pct_lula"].to_numpy()
     linhas = {}
     for esp in a.ordens.split(","):
-        ordem = obter_ordem(locais, esp, a.seed)
+        ordem = obter_ordem(locais, esp, a.seed, turno=2)
         sim = curva_parcial(locais, ordem, pcts)
         rmse = float(np.sqrt(np.mean((sim - alvo) ** 2)))
         mae = float(np.mean(np.abs(sim - alvo)))
-        print(f"\n== {esp} -> {Path(resolver_ordem(esp)).stem}: {descrever_ordem(esp)}")
+        print(f"\n== {esp} -> {Path(resolver_ordem(esp, 2)).stem}: {descrever_ordem(esp, 2)}")
         print(f"   RMSE {rmse:.3f} p.p. | erro absoluto médio {mae:.3f} p.p. (Lula, % válidos, {len(pcts)} versões)")
         linhas[esp] = sim
     print("\n% seções | oficial | " + " | ".join(f"{e[:14]:>14}" for e in linhas))

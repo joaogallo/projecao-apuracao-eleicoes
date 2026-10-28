@@ -36,8 +36,9 @@ def parse_args(argv=None):
     p.add_argument("--lambda-regiao", type=float, default=ConfigModelo.lambda_regiao)
     p.add_argument("--lambda-uf", type=float, default=ConfigModelo.lambda_uf)
     p.add_argument("--ordem", default="auto",
-                   help="'auto' (padrão: ordem real dos boletins de urna se resultados/ordem_bweb_2026_1t.csv existir, "
-                        "senão 'oficial-2026'), 'oficial-2026', 'realista', 'aleatoria' ou caminho "
+                   help="'auto' (padrão: ordem real dos boletins de urna do turno, se "
+                        "resultados/ordem_bweb_2026_<turno>t.csv existir, senão 'oficial-2026'), "
+                        "'oficial-2026', 'realista', 'aleatoria' ou caminho "
                         "de CSV (uf,cd_municipio,nr_local,ordem)")
     p.add_argument("--seed", type=int, default=2026)
     p.add_argument("--pontos", default=None,
@@ -64,11 +65,11 @@ def main(argv=None) -> int:
     pontos = [float(x) for x in a.pontos.split(",")] if a.pontos else PONTOS_PADRAO
 
     painel = montar_painel(atual, referencia, cfg, extras)
-    ordem = obter_ordem(painel.atual, a.ordem, a.seed)
+    ordem = obter_ordem(painel.atual, a.ordem, a.seed, a.turno)
 
     ref_txt = " + ".join(f"{y}:{t}" for y, t in refs)
     print(f"Eleição {a.ano} turno {a.turno} | referência {ref_txt} | seed={a.seed}")
-    print("Ordem de apuração:", descrever_ordem(a.ordem))
+    print("Ordem de apuração:", descrever_ordem(a.ordem, a.turno))
     print(f"Locais: {painel.atual.height} ({painel.casado.mean():.1%} casados com a referência) | "
           f"prior: " + ", ".join(f"{b}={100*v:.1f}%" for b, v in prior.shares.items()))
     res = simular(painel, ordem, prior, cfg, pontos, com_ponderada=not a.sem_ponderada)
@@ -79,7 +80,7 @@ def main(argv=None) -> int:
         print(resumo_erros(res.tabela, cfg.blocos))
 
     a.saida.mkdir(parents=True, exist_ok=True)
-    nome = f"simulacao_{a.ano}t{a.turno}_ref{'-'.join(f'{y}t{t}' for y, t in refs)}_{Path(resolver_ordem(a.ordem)).stem}_seed{a.seed}.csv"
+    nome = f"simulacao_{a.ano}t{a.turno}_ref{'-'.join(f'{y}t{t}' for y, t in refs)}_{Path(resolver_ordem(a.ordem, a.turno)).stem}_seed{a.seed}.csv"
     res.tabela.write_csv(a.saida / nome)
     print(f"\nTabela salva em {a.saida / nome}")
     return 0

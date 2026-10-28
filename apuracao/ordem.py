@@ -20,9 +20,12 @@ Modos disponíveis:
 * arquivo CSV com colunas ``uf, cd_municipio, nr_local, ordem`` (ordem crescente
   ou timestamp), para usar uma ordem real, por exemplo reconstruída dos horários
   de recebimento dos boletins de urna (arquivos "bweb" do TSE).
+* ``auto``: o CSV real do turno (``resultados/ordem_bweb_2026_<turno>t.csv``) se
+  existir, senão ``oficial-2026``.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import numpy as np
@@ -88,21 +91,26 @@ def ordem_de_arquivo(locais: pl.DataFrame, caminho: Path, seed: int) -> np.ndarr
     return np.lexsort((desempate, ordem))
 
 
-# Ordem real reconstruída dos boletins de urna (gerada por ``apuracao.bweb``).
-ORDEM_REAL_PADRAO = Path(__file__).resolve().parent.parent / "resultados" / "ordem_bweb_2026_1t.csv"
+# Ordem real reconstruída dos boletins de urna de cada turno (gerada por ``apuracao.bweb``).
+_RESULTADOS = Path(__file__).resolve().parent.parent / "resultados"
+ORDEM_REAL = {1: _RESULTADOS / "ordem_bweb_2026_1t.csv", 2: _RESULTADOS / "ordem_bweb_2026_2t.csv"}
+ORDEM_REAL_PADRAO = ORDEM_REAL[1]
 
 
-def resolver_ordem(especificacao: str) -> str:
-    """``auto`` vira a ordem real dos BUs quando o arquivo existe, senão ``oficial-2026``."""
+def resolver_ordem(especificacao: str, turno: int = 1) -> str:
+    """``auto`` vira a ordem real dos BUs do turno quando o arquivo existe, senão ``oficial-2026``."""
     if especificacao == "auto":
-        return str(ORDEM_REAL_PADRAO) if ORDEM_REAL_PADRAO.exists() else "oficial-2026"
+        real = ORDEM_REAL.get(turno)
+        return str(real) if real is not None and real.exists() else "oficial-2026"
     return especificacao
 
 
-def descrever_ordem(especificacao: str) -> str:
-    e = resolver_ordem(especificacao)
+def descrever_ordem(especificacao: str, turno: int = 1) -> str:
+    e = resolver_ordem(especificacao, turno)
     if Path(e).suffix.lower() == ".csv":
-        return ("ordem real: horário de recebimento dos boletins de urna do 1º turno de 2026 "
+        m = re.search(r"_(\d)t", Path(e).stem)
+        qual = f"do {m.group(1)}º turno de 2026" if m else f"({Path(e).name})"
+        return (f"ordem real: horário de recebimento dos boletins de urna {qual} "
                 "(mediana das seções de cada local de votação)")
     if e in CALIBRADAS:
         return ("ordem simulada, calibrada para reproduzir a totalização oficial do TSE do 2º turno de 2026, "
@@ -112,8 +120,8 @@ def descrever_ordem(especificacao: str) -> str:
     return "ordem aleatória (amostra representativa)"
 
 
-def obter_ordem(locais: pl.DataFrame, especificacao: str, seed: int) -> np.ndarray:
-    e = resolver_ordem(especificacao)
+def obter_ordem(locais: pl.DataFrame, especificacao: str, seed: int, turno: int = 1) -> np.ndarray:
+    e = resolver_ordem(especificacao, turno)
     p = Path(e)
     if p.suffix.lower() == ".csv":
         if not p.exists():

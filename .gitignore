@@ -7,5 +7,6 @@ __pycache__/
 # Dados brutos grandes ou de terceiros (ver README, seção "Dados")
 resources/votacao_secao_*/*.csv
 resources/bweb_2026_1t/
+resources/bweb_2026_2t/
 resources/*.mp4
 resources/*transcrição*.txt

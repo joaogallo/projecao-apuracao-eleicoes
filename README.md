@@ -16,10 +16,11 @@ preciso baixá-los do [portal de dados abertos do TSE](https://dadosabertos.tse.
 - `resources/votacao_secao_2026_BR/votacao_secao_2026_BR.csv` e
   `resources/votacao_secao_2022_BR/votacao_secao_2022_BR.csv` (1,5 GB cada): conjunto
   "Resultados - Votação por seção eleitoral", arquivo `votacao_secao_<ANO>_BR.zip`.
-- `resources/bweb_2026_1t/bweb_1t_<UF>_*.zip` (5,1 GB no total, opcional): conjunto
-  "Resultados - 2026 - Boletim de Urna", um zip por UF, usado só para reconstruir a ordem
-  real de apuração. O resultado dessa extração já está versionado em
-  `resultados/ordem_bweb_2026_1t.csv`.
+- `resources/bweb_2026_1t/bweb_1t_<UF>_*.zip` (5,1 GB no total) e
+  `resources/bweb_2026_2t/bweb_2t_<UF>_*.zip` (137 MB), opcionais: conjunto
+  "Resultados - 2026 - Boletim de Urna", um zip por UF e turno, usados só para
+  reconstruir a ordem real de apuração. O resultado dessa extração já está versionado em
+  `resultados/ordem_bweb_2026_1t.csv` e `resultados/ordem_bweb_2026_2t.csv`.
 - A entrevista em vídeo com o autor do modelo e sua transcrição também ficam fora do
   repositório.
 
@@ -68,16 +69,21 @@ autor testou e descartou porque as primeiras urnas de um município não são am
 
 O arquivo de votação por seção do TSE não traz o horário em que cada urna foi
 totalizada. Esse horário está nos arquivos de **boletim de urna** ("bweb", um zip por
-UF, 5,1 GB no total para o 1º turno de 2026), em `resources/bweb_2026_1t/`.
+UF e turno), em `resources/bweb_2026_1t/` e `resources/bweb_2026_2t/`.
 `apuracao/bweb.py` extrai de cada zip, em streaming, uma linha por seção com o campo
-`DT_BU_RECEBIDO` e grava `resultados/ordem_bweb_2026_1t.csv`: a ordem real de cada local
-de votação (mediana do horário de recebimento das suas seções). Todas as 499.206 seções do
-1º turno têm horário (17h08 de 4/10 a 2h58 de 5/10; 50% recebidas até 18h44).
+`DT_BU_RECEBIDO` e grava `resultados/ordem_bweb_2026_<turno>t.csv`: a ordem real de cada
+local de votação (mediana do horário de recebimento das suas seções).
+
+- 1º turno: 499.206 seções, todas com horário (17h08 de 4/10 a 2h58 de 5/10; 50%
+  recebidas até 18h44).
+- 2º turno: 499.207 seções, todas com horário (17h05 a 23h21 de 25/10; 50% recebidas
+  até 20h26). O relógio dos BUs bate com a série oficial: às 20h o TSE tinha 113.222
+  seções totalizadas e 111.995 BUs já haviam sido recebidos.
 
 Modos de `--ordem`:
 
-- `auto` (padrão): a ordem real dos boletins de urna, se o CSV acima existir; senão
-  `oficial-2026`.
+- `auto` (padrão): a ordem real dos boletins de urna do turno, se o CSV acima existir;
+  senão `oficial-2026`.
 - `oficial-2026`: um deslocamento por UF e um peso para o porte do município, calibrados
   por `apuracao/calibrar_ordem.py` para que a totalização parcial simulada reproduza, com
   erro de 0,09 p.p., a série oficial do TSE versão a versão (abaixo). A série diz quantas
@@ -95,16 +101,22 @@ nacional do TSE, de 17h06 a 23h27 de 25/10, coletadas pelo projeto Contagem Dire
 | ordem | erro RMS da parcial de Lula vs. série oficial |
 |---|---:|
 | `oficial-2026` (calibrada) | 0,09 p.p. |
+| ordem real dos BUs do 2º turno (`auto`) | 0,82 p.p. |
 | `aleatoria` | 0,95 p.p. |
 | ordem real dos BUs do 1º turno | 2,03 p.p. |
 | `realista` (padrão 2022) | 3,17 p.p. |
 
+A ordem real do 2º turno reproduz a série oficial com diferença abaixo de 0,2 p.p. a
+partir de 5% das urnas; o erro se concentra nos primeiros 3%, porque cada local entra
+inteiro no horário mediano das suas seções enquanto o TSE totaliza seção a seção (com
+1% das seções a parcial simulada dá 56,0% para Lula, contra 50,4% na oficial). A ordem
+calibrada acerta melhor a curva agregada porque foi ajustada a ela, mas é sintética; a
+projeção do 2º turno usa a ordem real.
+
 A ordem real do 1º turno não serve de aproximação para o 2º: no 1º turno a apuração foi
 fortemente enviesada (Lula com cerca de 40% da parcial entre 5% e 30% das urnas, contra
 45,2% no final), enquanto no 2º turno a parcial nunca ficou abaixo de 49,5% para Lula,
-mais perto de uma amostra aleatória. Os boletins de urna do 2º turno ainda não foram
-publicados pelo TSE; quando forem, basta rodar `apuracao.bweb` apontando para a pasta e
-passar o CSV em `--ordem`.
+mais perto de uma amostra aleatória.
 
 ## Uso
 
@@ -143,22 +155,26 @@ para Lula e 0,14 p.p. para Flávio; a matéria relata 0,34 e 0,02 p.p. para o mo
 original. A partir de 10% das urnas o erro fica abaixo de 0,1 p.p., enquanto a
 totalização parcial ainda mostrava Flávio 11 pontos à frente.
 
-2º turno de 2026, ordem `oficial-2026`, referências 2022 (2º turno) + 2026 (1º turno),
-prior 50/50. A coluna "parcial" é a série oficial do TSE:
+2º turno de 2026, **ordem real dos boletins de urna**, referências 2022 (2º turno) +
+2026 (1º turno), prior 50/50. A coluna "parcial" é a série oficial do TSE:
 
 | % seções apuradas | parcial Lula | projeção Lula | parcial Flávio | projeção Flávio |
 |---:|---:|---:|---:|---:|
-| 2,0% | 51,8% | 51,45% | 48,2% | 48,55% |
-| 10% | 50,5% | 51,80% | 49,5% | 48,20% |
-| 20% | 49,6% | 51,81% | 50,4% | 48,19% |
-| 30% | 49,5% | 51,80% | 50,5% | 48,20% |
-| 50% | 50,1% | 51,79% | 49,9% | 48,21% |
+| 1,0% | 50,4% | 50,49% | 49,6% | 49,51% |
+| 2,0% | 51,8% | 50,88% | 48,2% | 49,12% |
+| 5,0% | 51,2% | 51,43% | 48,8% | 48,57% |
+| 10% | 50,5% | 51,61% | 49,5% | 48,39% |
+| 20% | 49,6% | 51,62% | 50,4% | 48,38% |
+| 30% | 49,5% | 51,72% | 50,5% | 48,28% |
+| 50% | 50,1% | 51,82% | 49,9% | 48,18% |
 | final | 51,79% | | 48,21% | |
 
 Enquanto a totalização oficial mostrava Flávio na frente entre 20% e 40% das urnas, a
-projeção apontava Lula com 51,8% desde 10% apuradas. Esse número depende da ordem
-simulada: é o resultado do modelo numa apuração que segue a curva oficial, não uma
-reprodução da noite real urna a urna.
+projeção apontava Lula entre 51,6% e 51,8% desde 10% apuradas (erro abaixo de 0,2 p.p.).
+Com 5% das urnas o erro é de 0,36 p.p.; com 2%, de 0,9 p.p., porque os primeiros locais
+inteiros do 2º turno pendem mais para Lula do que as primeiras seções da totalização
+oficial (ver a nota sobre granularidade acima). Com a ordem simulada `oficial-2026` o
+modelo chega a 51,45% já com 2% das urnas.
 
 ## Dashboard interativo
 
@@ -171,8 +187,8 @@ uv run python -m apuracao.dashboard
 ```
 
 O primeiro comando roda a simulação dos dois turnos a cada 1% das seções e salva
-`resultados/dashboard.json` (1º turno com a ordem real dos BUs; 2º turno com a ordem
-calibrada e a série oficial do TSE anexada); o segundo monta `resultados/dashboard.html`
+`resultados/dashboard.json` (os dois turnos com a ordem real dos BUs; no 2º turno a
+série oficial do TSE vai anexada); o segundo monta `resultados/dashboard.html`
 (template em `apuracao/dashboard_template.html`), uma página com um slider de % de urnas
 apuradas que mostra a totalização até aquele instante (no 2º turno, o boletim oficial do
 TSE com seu horário), a projeção do modelo e um gráfico da evolução das duas curvas
