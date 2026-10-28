@@ -191,8 +191,9 @@ O primeiro comando roda a simulação dos dois turnos a cada 1% das seções e s
 série oficial do TSE vai anexada); o segundo monta `resultados/dashboard.html`
 (template em `apuracao/dashboard_template.html`), uma página com um slider de % de urnas
 apuradas que mostra a totalização até aquele instante (no 2º turno, o boletim oficial do
-TSE com seu horário), a projeção do modelo e um gráfico da evolução das duas curvas
-contra o resultado final.
+TSE com seu horário), a projeção do modelo, um gráfico da evolução das duas curvas
+contra o resultado final e um gráfico de barras com o percentual das seções de cada UF
+já apuradas naquele instante (agrupadas por região, com a linha do Brasil).
 
 `apuracao.dashboard` também grava `site/index.html`, a mesma página embrulhada em um
 documento HTML completo, que é o que o Vercel publica.

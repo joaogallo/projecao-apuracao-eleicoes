@@ -91,6 +91,15 @@ svg.chart { width: 100%; height: auto; display: block; font-family: var(--font-b
 .chart .lbl-end { font-size: 11px; font-weight: 500; fill: var(--fg); }
 .chart .cursor { stroke: var(--fg); stroke-width: 1; stroke-dasharray: 2 3; opacity: .6; }
 .chart .hover { stroke: var(--fg-3); stroke-width: 1; }
+.chart .bar-uf { fill: var(--accent, var(--fg-3)); opacity: .85; }
+.chart .bar-uf.done { opacity: 1; }
+.chart .bar-bg { fill: var(--surface-2); }
+.chart .lbl-uf { font-size: 11px; fill: var(--fg); font-weight: 500; }
+.chart .lbl-val { font-size: 10px; fill: var(--fg-2); font-variant-numeric: tabular-nums; }
+.chart .lbl-reg { font-size: 10px; fill: var(--fg-3); letter-spacing: .04em; }
+.chart .sep { stroke: var(--line); stroke-width: 1; }
+.chart .nacional { stroke: var(--fg); stroke-width: 1; stroke-dasharray: 4 3; opacity: .7; }
+.chart .lbl-nac { font-size: 11px; fill: var(--fg); font-weight: 500; }
 .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12); min-width: 170px; display: grid; gap: 3px; z-index: 2; }
 .tip b { font-family: var(--font-mono); font-weight: 500; }
 .tip .t { color: var(--fg-2); margin-bottom: 2px; }
@@ -159,6 +168,11 @@ th:first-child, td:first-child { text-align: left; }
       <svg class="chart" id="chart" viewBox="0 0 960 420" role="img" aria-label="Totalização oficial e projeção do modelo por percentual de seções apuradas"></svg>
       <div class="tip" id="tip" hidden></div>
     </div>
+  </section>
+
+  <section class="chart-card" aria-labelledby="h-ufs">
+    <div class="board-head"><h2 id="h-ufs">Apuração por UF</h2><span class="pill" id="pill-ufs">% das seções de cada UF apuradas até o instante</span></div>
+    <svg class="chart" id="chart-ufs" viewBox="0 0 960 260" role="img" aria-label="Percentual de seções apuradas em cada UF até o instante"></svg>
   </section>
 
   <details>
@@ -380,6 +394,45 @@ th:first-child, td:first-child { text-align: left; }
     $('tabela').innerHTML = h;
   }
 
+  // Barras: % das seções de cada UF já apuradas no instante, agrupadas por região.
+  const REGIOES = [['Norte', ['AC', 'AM', 'AP', 'PA', 'RO', 'RR', 'TO']], ['Nordeste', ['AL', 'BA', 'CE', 'MA', 'PB', 'PE', 'PI', 'RN', 'SE']],
+    ['Centro-Oeste', ['DF', 'GO', 'MS', 'MT']], ['Sudeste', ['ES', 'MG', 'RJ', 'SP']], ['Sul', ['PR', 'RS', 'SC']], ['Exterior', ['ZZ']]];
+  const UW = 960, UH = 260, UM = { l: 44, r: 96, t: 22, b: 44 };
+  function renderUFs() {
+    if (!cen.ufs) return;
+    const svg = $('chart-ufs');
+    const vals = cen.ufs.pct[pct] || cen.ufs.pct[cen.ufs.pct.length - 1];
+    const idx = {}; cen.ufs.lista.forEach((u, i) => { idx[u] = i; });
+    const grupos = REGIOES.map(([nome, ufs]) => [nome, ufs.filter(u => u in idx)]).filter(g => g[1].length);
+    const n = grupos.reduce((a, g) => a + g[1].length, 0), gaps = grupos.length - 1;
+    const iw = UW - UM.l - UM.r, ih = UH - UM.t - UM.b, gap = 14;
+    const bw = (iw - gap * gaps) / n, by = v => UM.t + ih * (1 - v);
+    let g = '';
+    for (let v = 0; v <= 1 + 1e-9; v += 0.25) {
+      const y = by(v).toFixed(1);
+      g += `<line class="grid" x1="${UM.l}" x2="${UM.l + iw}" y1="${y}" y2="${y}"/>`;
+      g += `<text x="${UM.l - 8}" y="${y}" text-anchor="end" dominant-baseline="middle">${Math.round(100 * v)}%</text>`;
+    }
+    let x = UM.l;
+    grupos.forEach(([nome, ufs], gi) => {
+      const x0 = x;
+      ufs.forEach(u => {
+        const v = vals[idx[u]] || 0, h = ih * v, total = cen.ufs.total[idx[u]];
+        g += `<rect class="bar-bg" x="${(x + 2).toFixed(1)}" y="${UM.t}" width="${(bw - 4).toFixed(1)}" height="${ih}" rx="2"/>`;
+        g += `<rect class="bar-uf${v >= 0.9995 ? ' done' : ''}" x="${(x + 2).toFixed(1)}" y="${by(v).toFixed(1)}" width="${(bw - 4).toFixed(1)}" height="${h.toFixed(1)}" rx="2"><title>${u}: ${fmtPct(v, 1)} das seções apuradas (${fmtInt(Math.round(v * total))} de ${fmtInt(total)})</title></rect>`;
+        g += `<text class="lbl-val" x="${(x + bw / 2).toFixed(1)}" y="${(by(v) - 4).toFixed(1)}" text-anchor="middle">${Math.round(100 * v)}</text>`;
+        g += `<text class="lbl-uf" x="${(x + bw / 2).toFixed(1)}" y="${UM.t + ih + 14}" text-anchor="middle">${u}</text>`;
+        x += bw;
+      });
+      g += `<text class="lbl-reg" x="${((x0 + x) / 2).toFixed(1)}" y="${UM.t + ih + 30}" text-anchor="middle">${nome.toUpperCase()}</text>`;
+      if (gi < grupos.length - 1) { g += `<line class="sep" x1="${(x + gap / 2).toFixed(1)}" x2="${(x + gap / 2).toFixed(1)}" y1="${UM.t}" y2="${UM.t + ih + 34}"/>`; x += gap; }
+    });
+    const nac = ponto(pct).pct_secoes || 0, yn = by(nac).toFixed(1);
+    g += `<line class="nacional" x1="${UM.l}" x2="${UM.l + iw}" y1="${yn}" y2="${yn}"/>`;
+    g += `<text class="lbl-nac" x="${UM.l + iw + 8}" y="${yn}" dominant-baseline="middle">Brasil ${fmtPct(nac, 1)}</text>`;
+    svg.innerHTML = g;
+  }
+
   function renderNotes() {
     $('notes').innerHTML = `
       <p><b>Como ler.</b> A totalização é a soma simples das urnas já contadas, como aparece na TV; nas primeiras horas ela reflete só os lugares que apuram mais rápido.${cen.oficial ? ' No 2º turno ela vem dos ' + cen.oficial.length + ' boletins nacionais que o TSE publicou ao longo da noite (coletor Contagem Direta), com o horário de cada um; a projeção, que precisa dos votos por local, roda sobre ' + (cen.ordem.startsWith('ordem_bweb') ? 'a ordem real em que os boletins de urna chegaram ao TSE, local a local' : 'uma ordem de apuração simulada e calibrada para seguir essa mesma curva') + '.' : ''} A projeção parte da pesquisa (${cen.prior_rotulo}), mede quanto cada local de votação já apurado mudou em relação a ${cen.referencia} e aplica esse <em>swing</em>, por regressão hierárquica (nacional → região → UF), aos locais ainda pendentes.</p>
@@ -392,6 +445,7 @@ th:first-child, td:first-child { text-align: left; }
     slider.setAttribute('aria-valuenow', p);
     renderBoards();
     renderCursor();
+    renderUFs();
   }
 
   function setCenario(id) {

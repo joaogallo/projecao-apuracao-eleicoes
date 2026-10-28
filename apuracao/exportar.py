@@ -30,6 +30,24 @@ NOMES = {
 }
 
 
+def apurado_por_uf(uf, n_secoes, ordem, locais_apurados):
+    """Para cada ponto da série (k locais apurados), a fração das seções de cada UF já apurada.
+
+    Devolve ``{"lista": [UFs], "total": [seções por UF], "pct": [[fração por UF] por ponto]}``.
+    """
+    import numpy as np
+    ufs = sorted(set(uf.tolist()))
+    idx = {u: i for i, u in enumerate(ufs)}
+    uf_ord = np.array([idx[u] for u in uf[ordem]])
+    sec_ord = np.asarray(n_secoes)[ordem]
+    total = np.bincount(uf_ord, weights=sec_ord, minlength=len(ufs))
+    pct = []
+    for k in locais_apurados:
+        acum = np.bincount(uf_ord[:k], weights=sec_ord[:k], minlength=len(ufs))
+        pct.append([round(float(a / t), 4) if t else 0.0 for a, t in zip(acum, total)])
+    return {"lista": ufs, "total": [int(t) for t in total], "pct": pct}
+
+
 def _limpa(v):
     if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
         return None
@@ -60,6 +78,8 @@ def main(argv=None):
         final = resultado_nacional(atual)
         blocos = [b for b in cfg.blocos if atual[f"v_{b}"].sum() > 0]
         serie = [{k: _limpa(v) for k, v in linha.items()} for linha in res.tabela.to_dicts()]
+        por_uf = apurado_por_uf(painel.atual["uf"].to_numpy(), painel.n_secoes, ordem,
+                                res.tabela["locais_apurados"].to_list())
         oficial = None
         if c["turno"] == 2 and ARQUIVO_T2_2026.exists():
             of = carregar_serie_oficial()
@@ -79,6 +99,7 @@ def main(argv=None):
             "total_secoes": int(painel.n_secoes.sum()),
             "total_locais": int(painel.n_secoes.size),
             "serie": serie,
+            "ufs": por_uf,
         })
         print(c["rotulo"], "ok:", len(serie), "pontos")
     a.saida.parent.mkdir(parents=True, exist_ok=True)
