@@ -30,22 +30,29 @@ NOMES = {
 }
 
 
-def apurado_por_uf(uf, n_secoes, ordem, locais_apurados):
-    """Para cada ponto da série (k locais apurados), a fração das seções de cada UF já apurada.
+def apurado_por_uf(uf, n_secoes, ordem, locais_apurados, v_atual, todos_blocos, blocos):
+    """Para cada ponto da série (k locais apurados), a fração das seções de cada UF já apurada
+    e a divisão dos votos válidos já apurados na UF entre os blocos.
 
-    Devolve ``{"lista": [UFs], "total": [seções por UF], "pct": [[fração por UF] por ponto]}``.
+    Devolve ``{"lista": [UFs], "total": [seções por UF], "pct": [[fração por UF] por ponto],
+    "parcial": {bloco: [[share por UF] por ponto]}}``.
     """
     import numpy as np
     ufs = sorted(set(uf.tolist()))
     idx = {u: i for i, u in enumerate(ufs)}
     uf_ord = np.array([idx[u] for u in uf[ordem]])
     sec_ord = np.asarray(n_secoes)[ordem]
+    v_ord = np.asarray(v_atual)[ordem]
     total = np.bincount(uf_ord, weights=sec_ord, minlength=len(ufs))
-    pct = []
+    pct, parcial = [], {b: [] for b in blocos}
     for k in locais_apurados:
         acum = np.bincount(uf_ord[:k], weights=sec_ord[:k], minlength=len(ufs))
         pct.append([round(float(a / t), 4) if t else 0.0 for a, t in zip(acum, total)])
-    return {"lista": ufs, "total": [int(t) for t in total], "pct": pct}
+        votos = {b: np.bincount(uf_ord[:k], weights=v_ord[:k, todos_blocos.index(b)], minlength=len(ufs)) for b in blocos}
+        validos = sum(votos.values())
+        for b in blocos:
+            parcial[b].append([round(float(v / t), 4) if t else 0.0 for v, t in zip(votos[b], validos)])
+    return {"lista": ufs, "total": [int(t) for t in total], "pct": pct, "parcial": parcial}
 
 
 def _limpa(v):
@@ -79,7 +86,7 @@ def main(argv=None):
         blocos = [b for b in cfg.blocos if atual[f"v_{b}"].sum() > 0]
         serie = [{k: _limpa(v) for k, v in linha.items()} for linha in res.tabela.to_dicts()]
         por_uf = apurado_por_uf(painel.atual["uf"].to_numpy(), painel.n_secoes, ordem,
-                                res.tabela["locais_apurados"].to_list())
+                                res.tabela["locais_apurados"].to_list(), painel.v_atual, cfg.blocos, blocos)
         oficial = None
         if c["turno"] == 2 and ARQUIVO_T2_2026.exists():
             of = carregar_serie_oficial()

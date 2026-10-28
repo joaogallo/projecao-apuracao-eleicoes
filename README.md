@@ -192,8 +192,11 @@ série oficial do TSE vai anexada); o segundo monta `resultados/dashboard.html`
 (template em `apuracao/dashboard_template.html`), uma página com um slider de % de urnas
 apuradas que mostra a totalização até aquele instante (no 2º turno, o boletim oficial do
 TSE com seu horário), a projeção do modelo, um gráfico da evolução das duas curvas
-contra o resultado final e um gráfico de barras com o percentual das seções de cada UF
-já apuradas naquele instante (agrupadas por região, com a linha do Brasil).
+contra o resultado final e um gráfico de barras empilhadas por UF: a altura é o
+percentual das seções da UF já apuradas naquele instante e as cores dividem a barra
+pela fração dos votos válidos apurados de cada candidato na UF (agrupadas por região,
+com a linha do Brasil). Os cards podem ser recolhidos e arrastados pela alça ⋮⋮ (ou
+movidos com as setas do teclado) para mudar a ordem vertical; o navegador lembra o estado.
 
 `apuracao.dashboard` também grava `site/index.html`, a mesma página embrulhada em um
 documento HTML completo, que é o que o Vercel publica.
