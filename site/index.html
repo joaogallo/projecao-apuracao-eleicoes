@@ -70,7 +70,16 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; marg
 
 .boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
 .board { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
-.board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.board-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.board-head .pill { margin-left: auto; }
+.fold { font: inherit; width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg-2); cursor: pointer; display: inline-grid; place-items: center; padding: 0; flex: none; }
+.fold:hover { color: var(--fg); border-color: var(--fg-3); }
+.fold:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fold svg { width: 14px; height: 14px; transition: transform .15s ease-out; }
+.collapsed .fold svg { transform: rotate(-90deg); }
+.collapsed > :not(.board-head) { display: none; }
+.collapsed { align-content: start; }
+@media (prefers-reduced-motion: reduce) { .fold svg { transition: none; } }
 .pill { font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--fg-2); white-space: nowrap; }
 .rows { display: grid; gap: 10px; }
 .row { display: grid; grid-template-columns: 10px 1fr auto; grid-template-areas: "dot name pct" "dot bar bar" "dot sub sub"; column-gap: 10px; row-gap: 3px; align-items: center; }
@@ -159,19 +168,19 @@ th:first-child, td:first-child { text-align: left; }
 
   <section class="boards">
     <div class="board" aria-labelledby="h-parcial">
-      <div class="board-head"><h2 id="h-parcial">Totalização até o instante</h2><span class="pill" id="pill-parcial">votos válidos apurados</span></div>
+      <div class="board-head"><h2 id="h-parcial">Totalização até o instante</h2><span class="pill" id="pill-parcial">votos válidos apurados</span><button type="button" class="fold" data-fold="h-parcial" aria-expanded="true" aria-controls="" title="Recolher"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
       <div class="rows" id="rows-parcial"></div>
       <div class="final-row" id="final-parcial"></div>
     </div>
     <div class="board" aria-labelledby="h-proj">
-      <div class="board-head"><h2 id="h-proj">Projeção do modelo</h2><span class="pill" id="pill-nivel">—</span></div>
+      <div class="board-head"><h2 id="h-proj">Projeção do modelo</h2><span class="pill" id="pill-nivel">—</span><button type="button" class="fold" data-fold="h-proj" aria-expanded="true" aria-controls="" title="Recolher"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
       <div class="rows" id="rows-proj"></div>
       <div class="final-row" id="final-proj"></div>
     </div>
   </section>
 
   <section class="chart-card" aria-labelledby="h-chart">
-    <div class="board-head"><h2 id="h-chart">Evolução ao longo da apuração</h2><span class="pill">% dos votos válidos, a cada 1% das seções</span></div>
+    <div class="board-head"><h2 id="h-chart">Evolução ao longo da apuração</h2><span class="pill">% dos votos válidos, a cada 1% das seções</span><button type="button" class="fold" data-fold="h-chart" aria-expanded="true" aria-controls="" title="Recolher"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
     <div class="legend" id="legend"></div>
     <div class="chart-wrap" id="chart-wrap">
       <svg class="chart" id="chart" viewBox="0 0 960 420" role="img" aria-label="Totalização oficial e projeção do modelo por percentual de seções apuradas"></svg>
@@ -180,7 +189,7 @@ th:first-child, td:first-child { text-align: left; }
   </section>
 
   <section class="chart-card" aria-labelledby="h-ufs">
-    <div class="board-head"><h2 id="h-ufs">Apuração por UF</h2><span class="pill" id="pill-ufs">% das seções de cada UF apuradas até o instante</span></div>
+    <div class="board-head"><h2 id="h-ufs">Apuração por UF</h2><span class="pill" id="pill-ufs">% das seções de cada UF apuradas até o instante</span><button type="button" class="fold" data-fold="h-ufs" aria-expanded="true" aria-controls="" title="Recolher"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
     <svg class="chart" id="chart-ufs" viewBox="0 0 960 260" role="img" aria-label="Percentual de seções apuradas em cada UF até o instante"></svg>
   </section>
 
@@ -475,6 +484,31 @@ th:first-child, td:first-child { text-align: left; }
   $('btn-reset').addEventListener('click', () => { stopPlay(); setPct(0); });
   slider.addEventListener('input', () => { stopPlay(); setPct(Number(slider.value), true); });
   document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { stopPlay(); setCenario(b.dataset.cen); }));
+
+  // Recolher/expandir cards; estado lembrado por card no navegador.
+  document.querySelectorAll('.fold').forEach(btn => {
+    const card = btn.closest('.board, .chart-card');
+    const chave = 'apuracao.fold.' + btn.dataset.fold;
+    const h2 = card.querySelector('h2');
+    btn.setAttribute('aria-label', 'Recolher ' + h2.textContent);
+    btn.removeAttribute('aria-controls');
+    const aplicar = fechado => {
+      card.classList.toggle('collapsed', fechado);
+      btn.setAttribute('aria-expanded', String(!fechado));
+      btn.title = fechado ? 'Expandir' : 'Recolher';
+      btn.setAttribute('aria-label', (fechado ? 'Expandir ' : 'Recolher ') + h2.textContent);
+    };
+    let fechado = false;
+    try { fechado = localStorage.getItem(chave) === '1'; } catch (e) {}
+    aplicar(fechado);
+    btn.addEventListener('click', () => {
+      fechado = !card.classList.contains('collapsed');
+      aplicar(fechado);
+      try { localStorage.setItem(chave, fechado ? '1' : '0'); } catch (e) {}
+    });
+    h2.style.cursor = 'pointer';
+    h2.addEventListener('click', () => btn.click());
+  });
 
   let inicial = 't1';
   try { inicial = localStorage.getItem('apuracao.cen') || 't1'; } catch (e) {}
